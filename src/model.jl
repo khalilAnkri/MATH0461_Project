@@ -24,7 +24,7 @@ costGMinus = 0.02  # AC/kWh
 # Model definition
 # -----------------------------
 model = Model(Gurobi.Optimizer)
-
+set_optimizer_attribute(model, "Method", 3)  # 1 for the Simplex algo and 3 for barrier method
 # -----------------------------
 # Decision variables
 # -----------------------------
