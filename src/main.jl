@@ -1,6 +1,7 @@
-include("data.jl")    # Provides consumption_1yr, irradiance_1yr
-include("model.jl")   # Uses consumption_1yr, irradiance_1yr
+include("data.jl")      # Provides consumption_1yr, irradiance_1yr
+include("model.jl")     # Uses consumption_1yr, irradiance_1yr
 include("analysis.jl")
+#include("modelQ4.jl")   # Provides the model related to the question 4
 
 @time optimize!(model)
 
