@@ -20,11 +20,14 @@ costBattery = 500  # AC/kWh
 costGPlus = 0.1    # AC/kWh
 costGMinus = 0.02  # AC/kWh
 
+AP = 20
 # -----------------------------
 # Model definition
 # -----------------------------
+
 model = Model(Gurobi.Optimizer)
 set_optimizer_attribute(model, "Method", 3)  # 1 for the Simplex algo and 3 for barrier method
+
 # -----------------------------
 # Decision variables
 # -----------------------------
@@ -60,25 +63,20 @@ set_optimizer_attribute(model, "Method", 3)  # 1 for the Simplex algo and 3 for 
 @constraint(model, E[T] == E[1])
 
 # -----------------------------
-# Force PV and battery use
-# -----------------------------
-# Ensure at least 30% of load comes from PV
-@constraint(model, sum(PPV[t] for t in time) >= 0.3 * sum(consumption))
-
-# Optionally, force some battery usage
-@constraint(model, sum(PBPlus[t] for t in time) >= 0.05 * sum(consumption))  # store at least 5% of daily consumption
-
-# -----------------------------
 # Objective function
 # -----------------------------
 # No amortization needed for 24h, but PV/battery fractions scaled to kW/kWh
 @objective(model, Min,
-    costPV*(capacityPanel/1000) +
-    costBattery*(capacityBattery/1000) +
+    (costPV/AP)*(capacityPanel/1000) +
+    (costBattery/AP)*(capacityBattery/1000) +
     sum((costGPlus*PGPlus[t]*deltat/1000 - costGMinus*PGMinus[t]*deltat/1000) for t in time)
 )
 
 # -----------------------------
+# Comment section
+# -----------------------------
+# I have added the fractions "/1000" in the objective function to ensure that the units are consistent,
+#  converting W to kW and Wh to kWh where necessary for cost calculations.
 # Comment section
 # -----------------------------
 # I have added the fractions "/1000" in the objective function to ensure that the units are consistent,
