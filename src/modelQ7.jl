@@ -69,7 +69,7 @@ set_optimizer_attribute(model, "Method", 3)  # 1 for the Simplex algo and 3 for 
 @objective(model, Min,
     thetaPV*(capacityPanel/1000) +
     thetaB*(capacityBattery/1000) +
-    thetaPV * deltat * sum(PGPlus[t] * deltat/1000 for t in time)
+    thetaG * sum(PGPlus[t] * deltat/1000 for t in time)
 )
 
 # -----------------------------
