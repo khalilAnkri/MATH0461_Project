@@ -20,63 +20,66 @@ costBattery = 500  # AC/kWh
 costGPlus = 0.1    # AC/kWh
 costGMinus = 0.02  # AC/kWh
 
+AP = 20
+
 # -----------------------------
 # Model definition
 # -----------------------------
 
-modelQ4 = Model(Gurobi.Optimizer)
+model = Model(Gurobi.Optimizer)
 set_optimizer_attribute(model, "Method", 3)  # 1 for the Simplex algo and 3 for barrier method
 
 # -----------------------------
 # Decision variables
 # -----------------------------
-@variable(modelQ4, capacityPanel >= 0)               # PV capacity [Wp]
-@variable(modelQ4, capacityBattery >= 0)             # Battery capacity [Wh]
-@variable(modelQ4, PGPlus[t in time] >= 0)           # Power bought from grid [W]
-@variable(modelQ4, PGMinus[t in time] >= 0)          # Power sold to grid [W]
-@variable(modelQ4, PBPlus[t in time] >= 0)           # Battery charging [W]
-@variable(modelQ4, PBMinus[t in time] >= 0)          # Battery discharging [W]
-@variable(modelQ4, PPV[t in time] >= 0)              # PV generation [W]
+@variable(model, capacityPanel >= 0)               # PV capacity [Wp]
+@variable(model, capacityBattery >= 0)             # Battery capacity [Wh]
+@variable(model, PGPlus[t in time] >= 0)           # Power bought from grid [W]
+@variable(model, PGMinus[t in time] >= 0)          # Power sold to grid [W]
+@variable(model, PBPlus[t in time] >= 0)           # Battery charging [W]
+@variable(model, PBMinus[t in time] >= 0)          # Battery discharging [W]
+@variable(model, PPV[t in time] >= 0)              # PV generation [W]
 
+@variable(model, sumPBPlus[t in time] >= 0)
+@variable(model, sumPBMinus[t in time] >= 0)
 # -----------------------------
 # Constraints
 # -----------------------------
 
 # Power balance
-@constraint(modelQ4, [t in time],
+@constraint(model, [t in time],
     consumption[t] + PBPlus[t] + PGMinus[t] == PPV[t] + PGPlus[t] + PBMinus[t]
 )
 
 # PV generation limit
-@constraint(modelQ4, [t in time],
+@constraint(model, [t in time],
     PPV[t] <= efficiencyPanel * irradiance[t] * capacityPanel
 )
 
+# Cumulative PBMinus and PBPlus in order to avoid to recompute all the sum at each setup
+
+@constraint(model, sumPBPlus[1] == PBPlus[1])
+@constraint(model, sumPBMinus[1] == PBMinus[1])
+@constraint(model, [t in 2:T], sumPBPlus[t] == sumPBPlus[t-1] + PBPlus[t])
+@constraint(model, [t in 2:T], sumPBMinus[t] == sumPBMinus[t-1] + PBMinus[t])
+
 # Battery dynamics
-@constraint(modelQ4, [t in time], 0.5*capacityBattery +  efficiencyBattery*deltat*sum(PBPlus[t] for t in t)
-                                - (deltat/efficiencyBattery)*sum(PBMinus[t] for t in t) <= 0.5*capacityBattery)
+@constraint(model, [t in time], 0.5*capacityBattery +  efficiencyBattery*deltat*sumPBPlus[t]
+                                - (deltat/efficiencyBattery)*sumPBMinus[t] <= capacityBattery)
 
-@constraint(modelQ4, [t in time], 0.5*capacityBattery +  efficiencyBattery*deltat*sum(PBPlus[t] for t in t)
-                                - (deltat/efficiencyBattery)*sum(PBMinus[t] for t in t) >= 0)
+@constraint(model, [t in time], 0.5*capacityBattery +  efficiencyBattery*deltat*sumPBPlus[t]
+                                - (deltat/efficiencyBattery)*sumPBMinus[t] >= 0)
 
-@constraint(modelQ4, efficiencyBattery*deltat*sum(PBPlus[i]  for i in 2:T) 
-                    - (deltat/efficiencyBattery)*sum(PBMinus[i] for i in 2:T) == 0)
-# -----------------------------
-# Force PV and battery use
-# -----------------------------
-# Ensure at least 30% of load comes from PV
-@constraint(modelQ4, sum(PPV[t] for t in time) >= 0.3 * sum(consumption))
-
-# Optionally, force some battery usage
-@constraint(modelQ4, sum(PBPlus[t] for t in time) >= 0.05 * sum(consumption))  # store at least 5% of daily consumption
+@constraint(model, efficiencyBattery*deltat*(sumPBPlus[T]-PBPlus[1])
+                    - (deltat/efficiencyBattery)*(sumPBMinus[T]-PBMinus[1]) == 0)
 
 # -----------------------------
 # Objective function
 # -----------------------------
 # No amortization needed for 24h, but PV/battery fractions scaled to kW/kWh
-@objective(modelQ4, Min,
-    costPV*(capacityPanel/1000) +
-    costBattery*(capacityBattery/1000) +
+@objective(model, Min,
+    (costPV/AP)*(capacityPanel/1000) +
+    (costBattery/AP)*(capacityBattery/1000) +
     sum((costGPlus*PGPlus[t]*deltat/1000 - costGMinus*PGMinus[t]*deltat/1000) for t in time)
 )
 
