@@ -17,7 +17,9 @@ efficiencyBattery = 0.95
 # C0_2 Emissions parameters
 thetaPV = 1000 #(kg CO_2 / kW_p) 
 thetaB = 150 #(kg CO_2 / kWh_p) 
-thetaG = 0.1 #(kg CO_2 / kWh) 
+thetaG = 0.1 #(kg CO_2 / kWh)
+
+AP = 20
 
 # -----------------------------
 # Model definition
@@ -61,22 +63,13 @@ set_optimizer_attribute(model, "Method", 3)  # 1 for the Simplex algo and 3 for 
 @constraint(model, E[T] == E[1])
 
 # -----------------------------
-# Force PV and battery use
-# -----------------------------
-# Ensure at least 30% of load comes from PV
-@constraint(model, sum(PPV[t] for t in time) >= 0.3 * sum(consumption))
-
-# Optionally, force some battery usage
-@constraint(model, sum(PBPlus[t] for t in time) >= 0.05 * sum(consumption))  # store at least 5% of daily consumption
-
-# -----------------------------
 # Objective function
 # -----------------------------
 # No amortization needed for 24h, but PV/battery fractions scaled to kW/kWh
 @objective(model, Min,
     thetaPV*(capacityPanel/1000) +
     thetaB*(capacityBattery/1000) +
-    thetaPV * deltat * sum((PGPlus[T]) for t in time)
+    thetaPV * deltat * sum(PGPlus[t] * deltat/1000 for t in time)
 )
 
 # -----------------------------
