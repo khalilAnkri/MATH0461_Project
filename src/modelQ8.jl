@@ -22,6 +22,8 @@ costGPlus = 0.1    # AC/kWh
 costGMinus = 0.02  # AC/kWh
 costW = 1500       # €/kwh
 
+AP = 20
+
 # -----------------------------
 # Model definition
 # -----------------------------
@@ -75,28 +77,22 @@ set_optimizer_attribute(model, "Method", 3)  # 1 for the Simplex algo and 3 for 
 # Cost constraint
 @constraint(model, [s in scenario], S >= cost[s])
 
-@constraint(model, [s in scenario], cost[s] == sum((costGPlus*PGPlus[t,s]*deltat/1000 - costGPlus*PGMinus[t,s]*deltat/1000)
+@constraint(model, [s in scenario], cost[s] == sum((costGPlus*PGPlus[t,s]*deltat/1000 - costGMinus*PGMinus[t,s]*deltat/1000)
                                                   for t in time))
-
-
-# -----------------------------
-# Force PV and battery use
-# -----------------------------
-# Ensure at least 30% of load comes from PV
-@constraint(model, [s in scenario], sum(PPV[t,s] for t in time) >= 0.3 * sum(consumption))
-
-# Optionally, force some battery usage
-@constraint(model, [s in scenario], sum(PBPlus[t,s] for t in time) >= 0.05 * sum(consumption))  # store at least 5% of daily consumption
-
+                                                    
 # -----------------------------
 # Objective function
 # -----------------------------
 # No amortization needed for 24h, but PV/battery fractions scaled to kW/kWh
 @objective(model, Min,
-    costPV*(capacityPanel/1000) + costBattery*(capacityBattery/1000) + costW * (capacityWind/1000) + sum(cost[s] for s in scenario) + S )
+    (costPV/AP)*(capacityPanel/1000) + (costBattery/AP)*(capacityBattery/1000) + (costW/AP) * (capacityWind/1000) + sum(cost[s] for s in scenario) + S )
 
 # -----------------------------
 # Comment section
 # -----------------------------
 # I have added the fractions "/1000" in the objective function to ensure that the units are consistent,
 #  converting W to kW and Wh to kWh where necessary for cost calculations.
+# -----------------------------
+# I have added the fractions "/1000" in the objective function to ensure that the units are consistent,
+#  converting W to kW and Wh to kWh where necessary for cost calculations.
+
