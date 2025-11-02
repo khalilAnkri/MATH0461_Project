@@ -7,6 +7,7 @@ include("data.jl")  # provides: consumption, irradiance
 T = length(consumption)
 time = 1:T
 deltat = 1.0  # hours
+years = T*deltat/(24*365)  
 
 # -----------------------------
 # System parameters
@@ -65,15 +66,9 @@ set_optimizer_attribute(model, "Method", 3)  # 1 for the Simplex algo and 3 for 
 # -----------------------------
 # Objective function
 # -----------------------------
-# No amortization needed for 24h, but PV/battery fractions scaled to kW/kWh
-@objective(model, Min,
-    thetaPV*(capacityPanel/1000) +
-    thetaB*(capacityBattery/1000) +
-    thetaG * sum(PGPlus[t] * deltat/1000 for t in time)
-)
 
-# -----------------------------
-# Comment section
-# -----------------------------
-# I have added the fractions "/1000" in the objective function to ensure that the units are consistent,
-#  converting W to kW and Wh to kWh where necessary for cost calculations.
+@objective(model, Min,
+    thetaPV*capacityPanel +
+    thetaB*capacityBattery +
+    thetaG*sum(PGPlus[t] * deltat for t in time)
+)
