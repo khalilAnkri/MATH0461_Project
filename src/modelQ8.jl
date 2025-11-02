@@ -77,22 +77,13 @@ set_optimizer_attribute(model, "Method", 3)  # 1 for the Simplex algo and 3 for 
 # Cost constraint
 @constraint(model, [s in scenario], S >= cost[s])
 
-@constraint(model, [s in scenario], cost[s] == sum((costGPlus*PGPlus[t,s]*deltat/1000 - costGMinus*PGMinus[t,s]*deltat/1000)
+@constraint(model, [s in scenario], cost[s] == sum((costGPlus*PGPlus[t,s]*deltat - costGMinus*PGMinus[t,s]*deltat)
                                                   for t in time))
                                                     
 # -----------------------------
 # Objective function
 # -----------------------------
-# No amortization needed for 24h, but PV/battery fractions scaled to kW/kWh
-@objective(model, Min,
-    (costPV/AP)*(capacityPanel/1000) + (costBattery/AP)*(capacityBattery/1000) + (costW/AP) * (capacityWind/1000) + sum(cost[s] for s in scenario) + S )
 
-# -----------------------------
-# Comment section
-# -----------------------------
-# I have added the fractions "/1000" in the objective function to ensure that the units are consistent,
-#  converting W to kW and Wh to kWh where necessary for cost calculations.
-# -----------------------------
-# I have added the fractions "/1000" in the objective function to ensure that the units are consistent,
-#  converting W to kW and Wh to kWh where necessary for cost calculations.
+@objective(model, Min,
+    costPV*(years/AP)*capacityPanel + costBattery*(years/AP)*capacityBattery+ costW*(years/AP)*capacityWind + sum(cost[s] for s in scenario) + S )
 
