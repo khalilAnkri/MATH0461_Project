@@ -85,5 +85,4 @@ set_optimizer_attribute(model, "Method", 3)  # 1 for the Simplex algo and 3 for 
 # -----------------------------
 
 @objective(model, Min,
-    costPV*(years/AP)*capacityPanel + costBattery*(years/AP)*capacityBattery+ costW*(years/AP)*capacityWind + sum(cost[s] for s in scenario) + S )
-
+    costPV*(years/AP)*capacityPanel + costBattery*(years/AP)*capacityBattery+ costW*(years/AP)*capacityWind + (1/3)*sum(cost[s] for s in scenario) + S )
