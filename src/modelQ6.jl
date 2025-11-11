@@ -7,6 +7,8 @@ T = length(consumption)
 time = 1:T
 deltat = 1.0  # hours
 years = T*deltat/(24*365)  
+AP = 20 # years
+alpha = years/AP
 
 # -----------------------------
 # System parameters
@@ -15,12 +17,11 @@ efficiencyPanel = 0.86
 efficiencyBattery = 0.95
 
 # Cost parameters
-costPV = 800       # AC/kWp
-costBattery = 500  # AC/kWh
-costGPlus = 0.1    # AC/kWh
-costGMinus = 0.02  # AC/kWh
+costPV = 800       # €/kW_p
+costBattery = 500  # €/kWh_p
+costGPlus = 0.1    # €/kWh
+costGMinus = 0.02  # €/kWh
 
-AP = 20
 # -----------------------------
 # Model definition
 # -----------------------------
@@ -66,13 +67,15 @@ model = Model(HiGHS.Optimizer)
 # -----------------------------
   
 @objective(model, Min,
-    costPV*(years/AP)*capacityPanel +
-    costBattery*(years/AP)*capacityBattery +
+    costPV*alpha*capacityPanel +
+    costBattery*alpha*capacityBattery +
     sum((costGPlus*PGPlus[t]*deltat- costGMinus*PGMinus[t]*deltat) for t in time)
 )
 
 optimize!(model)
 
-report = lp_sensitivity_report(model)
+println("Optimal PV capacity (Wp): ", value(capacityPanel))
+println("Optimal battery capacity (Wh): ", value(capacityBattery))
 
+report = lp_sensitivity_report(model)
 println("Sensitivity for cost of capacityBattery : ", report[capacityBattery])
