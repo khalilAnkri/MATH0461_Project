@@ -8,6 +8,9 @@ T = length(consumption)
 time = 1:T
 deltat = 1.0  # hours
 scenario = 1:3
+years = T*deltat/(24*365)  
+AP = 20 # years
+alpha = years/AP
 
 # -----------------------------
 # System parameters
@@ -16,13 +19,11 @@ efficiencyPanel = 0.86
 efficiencyBattery = 0.95
 
 # Cost parameters
-costPV = 800       # AC/kWp
-costBattery = 500  # AC/kWh
-costGPlus = 0.1    # AC/kWh
-costGMinus = 0.02  # AC/kWh
-costW = 1500       # €/kwh
-
-AP = 20
+costPV = 800       # €/kW_p
+costBattery = 500  # €/kWh_p
+costGPlus = 0.1    # €/kWh
+costGMinus = 0.02  # €/kWh
+costW = 1500       # €/kwh_p
 
 # -----------------------------
 # Model definition
@@ -85,4 +86,4 @@ set_optimizer_attribute(model, "Method", 3)  # 1 for the Simplex algo and 3 for 
 # -----------------------------
 
 @objective(model, Min,
-    costPV*(years/AP)*capacityPanel + costBattery*(years/AP)*capacityBattery+ costW*(years/AP)*capacityWind + (1/3)*sum(cost[s] for s in scenario) + S )
+    costPV*alpha*capacityPanel + costBattery*alpha*capacityBattery+ costW*alpha*capacityWind + (1/3)*sum(cost[s] for s in scenario) + S )
