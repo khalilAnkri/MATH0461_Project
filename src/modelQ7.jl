@@ -1,4 +1,4 @@
-using JuMP, Gurobi
+using JuMP, HiGHS
 include("data.jl")  # provides: consumption, irradiance
 
 # -----------------------------
@@ -8,6 +8,8 @@ T = length(consumption)
 time = 1:T
 deltat = 1.0  # hours
 years = T*deltat/(24*365)  
+AP = 20 # years
+alpha = years/AP
 
 # -----------------------------
 # System parameters
@@ -16,18 +18,15 @@ efficiencyPanel = 0.86
 efficiencyBattery = 0.95
 
 # C0_2 Emissions parameters
-thetaPV = 1000 #(kg CO_2 / kW_p) 
-thetaB = 150 #(kg CO_2 / kWh_p) 
-thetaG = 0.1 #(kg CO_2 / kWh)
-
-AP = 20
+thetaPV = 1000 #kg CO_2/kW_p 
+thetaB = 150 #kg CO_2/kWh_p 
+thetaG = 0.1 #kg CO_2/kWh
 
 # -----------------------------
 # Model definition
 # -----------------------------
 
-model = Model(Gurobi.Optimizer)
-set_optimizer_attribute(model, "Method", 3)  # 1 for the Simplex algo and 3 for barrier method
+model = Model(HiGHS.Optimizer)
 
 # -----------------------------
 # Decision variables
@@ -40,6 +39,7 @@ set_optimizer_attribute(model, "Method", 3)  # 1 for the Simplex algo and 3 for 
 @variable(model, PBMinus[t in time] >= 0)          # Battery discharging [W]
 @variable(model, PPV[t in time] >= 0)              # PV generation [W]
 @variable(model, E[t in time] >= 0)                # Battery energy [Wh]
+@variable(model, Buffer >= 0)                      # Buffer variable [Wh]
 
 # -----------------------------
 # Constraints
@@ -63,6 +63,9 @@ set_optimizer_attribute(model, "Method", 3)  # 1 for the Simplex algo and 3 for 
 @constraint(model, [t in time], E[t] <= capacityBattery)
 @constraint(model, E[T] == E[1])
 
+# Buffer constraint
+@constraint(model, Buffer == sum(PGPlus[t] * deltat for t in time))
+
 # -----------------------------
 # Objective function
 # -----------------------------
@@ -70,5 +73,14 @@ set_optimizer_attribute(model, "Method", 3)  # 1 for the Simplex algo and 3 for 
 @objective(model, Min,
     thetaPV*capacityPanel +
     thetaB*capacityBattery +
-    thetaG*sum(PGPlus[t] * deltat for t in time)
+    thetaG*Buffer
 )
+
+optimize!(model)
+
+println("Optimal PV capacity [Wp]: ", value(capacityPanel))
+println("Optimal battery capacity [Wh]: ", value(capacityBattery))
+println("Optimal Buffer value [Wh]: ", value(Buffer))
+
+report = lp_sensitivity_report(model)
+println("Sensitivity for cost of Buffer : ", report[Buffer])
