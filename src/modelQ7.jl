@@ -83,4 +83,11 @@ println("Optimal battery capacity [Wh]: ", value(capacityBattery))
 println("Optimal Buffer value [Wh]: ", value(Buffer))
 
 report = lp_sensitivity_report(model)
-println("Sensitivity for cost of Buffer : ", report[Buffer])
+println("Sensitivity report for θG (via Buffer variable): ", report[Buffer])
+
+thetaG_range = report[Buffer]  # returns a tuple (min_change, max_change)
+
+thetaG_min = thetaG + thetaG_range[1]
+thetaG_max = thetaG + thetaG_range[2]
+
+println("Allowable θG range: [", thetaG_min, ", ", thetaG_max, "] kgCO2/kWh")
