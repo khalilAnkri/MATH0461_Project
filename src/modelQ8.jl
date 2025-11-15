@@ -44,9 +44,9 @@ set_optimizer_attribute(model, "Method", 3)  # 1 for the Simplex algo and 3 for 
 @variable(model, PBMinus[t in time, s in scenario] >= 0)          # Battery discharging [W]
 @variable(model, PPV[t in time, s in scenario] >= 0)              # PV generation [W]
 @variable(model, E[t in time, s in scenario] >= 0)                # Battery energy [Wh]
-@variable(model, S >= 0)                                          # Variable related to the worst case scenario
+@variable(model, S)                                          # Variable related to the worst case scenario
 @variable(model, PWind[t in time, s in scenario] >= 0)            # Power produces by the wind [W]
-@variable(model, cost[s in scenario] >= 0)                        # Cost of the s scenario [€]
+@variable(model, cost[s in scenario])                             # Cost of the s scenario [€]
 
 # -----------------------------
 # Constraints
@@ -80,10 +80,15 @@ set_optimizer_attribute(model, "Method", 3)  # 1 for the Simplex algo and 3 for 
 
 @constraint(model, [s in scenario], cost[s] == sum((costGPlus*PGPlus[t,s]*deltat - costGMinus*PGMinus[t,s]*deltat)
                                                   for t in time))
-                                                    
+
+# Constraint against unboundness
+@constraint(model, capacityWind <= 1000)
+@constraint(model, capacityPanel <= 4000)
+
+
 # -----------------------------
 # Objective function
 # -----------------------------
 
 @objective(model, Min,
-    costPV*alpha*capacityPanel + costBattery*alpha*capacityBattery+ costW*alpha*capacityWind + (1/3)*sum(cost[s] for s in scenario) + S )
+    costPV*alpha*capacityPanel + costBattery*alpha*capacityBattery+ costW*alpha*capacityWind + S + (1/3)*sum(cost[s] for s in scenario))
