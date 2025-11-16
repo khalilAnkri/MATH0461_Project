@@ -83,3 +83,8 @@ set_optimizer_attribute(model, "Method", 3)  # 1 for the Simplex algo and 3 for 
     costBattery*alpha*capacityBattery +
     years * sum((costGPlus*PGPlus[t]*deltat - costGMinus*PGMinus[t]*deltat) for t in time)
 )
+
+@time optimize!(model)
+
+println("Optimal PV capacity [Wp] : ", value(capacityPanel))
+println("Optimal battery capacity [Wh] : ", value(capacityBattery))
