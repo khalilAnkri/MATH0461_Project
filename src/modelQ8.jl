@@ -92,3 +92,13 @@ set_optimizer_attribute(model, "Method", 3)  # 1 for the Simplex algo and 3 for 
 
 @objective(model, Min,
     costPV*alpha*capacityPanel + costBattery*alpha*capacityBattery+ costW*alpha*capacityWind + S + (1/3)*sum(cost[s] for s in scenario))
+
+@time optimize!(model)
+
+println("Optimal PV capacity [Wp] : ", value(capacityPanel))
+println("Optimal battery capacity [Wh] : ", value(capacityBattery))
+println("Optimal wind capacity [Wp] :", value(capacityWind))
+println("Optimal value of S [€] :", value(S))
+for s in 1:3
+    println("Optimal cost for scenario $s [€] : ", value(cost[s]))
+end
