@@ -1,5 +1,6 @@
 using JuMP, Gurobi
 include("data.jl")  # provides: consumption, irradiance
+include("analysis.jl")
 
 # -----------------------------
 # Time setup
@@ -73,3 +74,11 @@ set_optimizer_attribute(model, "Method", 3)  # 1 for the Simplex algo and 3 for 
     costBattery*alpha*capacityBattery +
     sum((costGPlus*PGPlus[t]*deltat- costGMinus*PGMinus[t]*deltat) for t in time)
 )
+
+@time optimize!(model)
+
+println("Optimal PV capacity [Wp] : ", value(capacityPanel))
+println("Optimal battery capacity [Wh] : ", value(capacityBattery))
+
+plot_week(Array(value(PPV)),Array(value(PBPlus)),Array(value(PBMinus)),Array(value(PGPlus)),
+            Array(value(PGMinus)),Array(value(E)),consumption)
